@@ -50,6 +50,9 @@
         button:hover {
             opacity: 0.9;
         }
+        button.delete-btn {
+            background-color: #f44336;
+        }
         .result {
             margin-top: 20px;
             padding: 15px;
@@ -116,6 +119,18 @@
         .product-item:nth-child(odd) {
             background-color: #f9f9f9;
         }
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .modal-buttons button {
+            flex: 1;
+            margin: 0 5px;
+        }
+        .modal-buttons button.cancel {
+            background-color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -130,6 +145,7 @@
         <div class="buttons">
             <button onclick="showAddModal()">إضافة منتج</button>
             <button onclick="showEditModal()">تعديل منتج</button>
+            <button onclick="showDeleteModal()" class="delete-btn">حذف منتج</button>
             <button onclick="showAllProducts()">عرض جميع المنتجات</button>
         </div>
         
@@ -157,6 +173,23 @@
                 <input type="text" id="editNewProductName" placeholder="اسم المنتج الجديد (اتركه فارغاً إذا لم ترد تغييره)" />
                 <input type="text" id="editProductLocation" placeholder="الموقع الجديد (مثال: 2a، 3c)" />
                 <button onclick="editProduct()">حفظ التعديل</button>
+            </div>
+        </div>
+        
+        <!-- نافذة حذف منتج -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('deleteModal')">&times;</span>
+                <h2>حذف منتج</h2>
+                <input type="text" id="deleteProductName" placeholder="اسم المنتج المراد حذفه" />
+                <div id="deleteConfirmation" style="display: none;">
+                    <p>هل أنت متأكد من حذف المنتج: <span id="productToDelete"></span>؟</p>
+                    <div class="modal-buttons">
+                        <button onclick="deleteProduct()" class="delete-btn">نعم، حذف</button>
+                        <button onclick="closeModal('deleteModal')" class="cancel">إلغاء</button>
+                    </div>
+                </div>
+                <button id="checkProductBtn" onclick="checkProductForDelete()">تحقق</button>
             </div>
         </div>
     </div>
@@ -272,6 +305,50 @@
             showAllProducts();
         }
         
+        // التحقق من وجود المنتج قبل الحذف
+        function checkProductForDelete() {
+            const productName = document.getElementById('deleteProductName').value.trim();
+            
+            if (!productName) {
+                showMessage('الرجاء إدخال اسم المنتج المراد حذفه', 'error');
+                return;
+            }
+            
+            const products = JSON.parse(localStorage.getItem('products'));
+            const foundProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+            
+            if (!foundProduct) {
+                showMessage('المنتج غير موجود في المخزون', 'error');
+                return;
+            }
+            
+            // عرض تأكيد الحذف
+            document.getElementById('productToDelete').textContent = foundProduct.name;
+            document.getElementById('deleteConfirmation').style.display = 'block';
+            document.getElementById('checkProductBtn').style.display = 'none';
+        }
+        
+        // حذف منتج
+        function deleteProduct() {
+            const productName = document.getElementById('deleteProductName').value.trim();
+            const products = JSON.parse(localStorage.getItem('products'));
+            const productIndex = products.findIndex(p => p.name.toLowerCase() === productName.toLowerCase());
+            
+            if (productIndex === -1) {
+                showMessage('المنتج غير موجود في المخزون', 'error');
+                return;
+            }
+            
+            // حذف المنتج من المصفوفة
+            products.splice(productIndex, 1);
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            showMessage('تم حذف المنتج بنجاح', 'success');
+            closeModal('deleteModal');
+            clearInputs();
+            showAllProducts();
+        }
+        
         // عرض جميع المنتجات
         function showAllProducts() {
             const productListDiv = document.getElementById('productList');
@@ -319,6 +396,13 @@
             document.getElementById('editModal').style.display = 'block';
         }
         
+        // عرض نافذة الحذف
+        function showDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'block';
+            document.getElementById('deleteConfirmation').style.display = 'none';
+            document.getElementById('checkProductBtn').style.display = 'block';
+        }
+        
         // إغلاق النوافذ المنبثقة
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
@@ -332,6 +416,7 @@
             document.getElementById('editProductName').value = '';
             document.getElementById('editNewProductName').value = '';
             document.getElementById('editProductLocation').value = '';
+            document.getElementById('deleteProductName').value = '';
         }
         
         // إغلاق النافذة المنبثقة عند النقر خارجها

@@ -152,8 +152,9 @@
         <div id="editModal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('editModal')">&times;</span>
-                <h2>تعديل موقع منتج</h2>
-                <input type="text" id="editProductName" placeholder="اسم المنتج" />
+                <h2>تعديل منتج</h2>
+                <input type="text" id="editProductName" placeholder="اسم المنتج الحالي" />
+                <input type="text" id="editNewProductName" placeholder="اسم المنتج الجديد (اتركه فارغاً إذا لم ترد تغييره)" />
                 <input type="text" id="editProductLocation" placeholder="الموقع الجديد (مثال: 2a، 3c)" />
                 <button onclick="editProduct()">حفظ التعديل</button>
             </div>
@@ -218,13 +219,19 @@
             showAllProducts();
         }
         
-        // تعديل موقع منتج
+        // تعديل منتج
         function editProduct() {
             const productName = document.getElementById('editProductName').value.trim();
+            const newProductName = document.getElementById('editNewProductName').value.trim();
             const newLocation = document.getElementById('editProductLocation').value.trim();
             
-            if (!productName || !newLocation) {
-                showMessage('الرجاء إدخال اسم المنتج والموقع الجديد', 'error');
+            if (!productName) {
+                showMessage('الرجاء إدخال اسم المنتج الحالي', 'error');
+                return;
+            }
+            
+            if (!newLocation && !newProductName) {
+                showMessage('الرجاء إدخال الاسم الجديد أو الموقع الجديد على الأقل', 'error');
                 return;
             }
             
@@ -236,11 +243,30 @@
                 return;
             }
             
-            // تحديث موقع المنتج
-            products[productIndex].location = newLocation;
+            // التحقق من عدم وجود منتج آخر بنفس الاسم الجديد
+            if (newProductName) {
+                const duplicateName = products.find(p => 
+                    p.name.toLowerCase() === newProductName.toLowerCase() && 
+                    p.name.toLowerCase() !== productName.toLowerCase()
+                );
+                
+                if (duplicateName) {
+                    showMessage('يوجد منتج آخر بنفس الاسم الجديد', 'error');
+                    return;
+                }
+                
+                // تحديث اسم المنتج
+                products[productIndex].name = newProductName;
+            }
+            
+            // تحديث موقع المنتج إذا تم إدخال موقع جديد
+            if (newLocation) {
+                products[productIndex].location = newLocation;
+            }
+            
             localStorage.setItem('products', JSON.stringify(products));
             
-            showMessage('تم تعديل موقع المنتج بنجاح', 'success');
+            showMessage('تم تعديل المنتج بنجاح', 'success');
             closeModal('editModal');
             clearInputs();
             showAllProducts();
@@ -304,6 +330,7 @@
             document.getElementById('newProductName').value = '';
             document.getElementById('newProductLocation').value = '';
             document.getElementById('editProductName').value = '';
+            document.getElementById('editNewProductName').value = '';
             document.getElementById('editProductLocation').value = '';
         }
         

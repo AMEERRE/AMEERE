@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة مخزون إكسسوارات الهواتف</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-box {
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+        input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 20% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+        }
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .buttons button {
+            flex: 1;
+            min-width: 120px;
+        }
+        .product-list {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .product-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        .product-item:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>إدارة مخزون إكسسوارات الهواتف</h1>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="ابحث عن منتج (مثال: iPhone 13 لاصق)" />
+            <button onclick="searchProduct()">بحث</button>
+        </div>
+        
+        <div class="buttons">
+            <button onclick="showAddModal()">إضافة منتج</button>
+            <button onclick="showEditModal()">تعديل منتج</button>
+            <button onclick="showAllProducts()">عرض جميع المنتجات</button>
+        </div>
+        
+        <div id="result" class="result"></div>
+        
+        <div id="productList" class="product-list"></div>
+        
+        <!-- نافذة إضافة منتج -->
+        <div id="addModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('addModal')">&times;</span>
+                <h2>إضافة منتج جديد</h2>
+                <input type="text" id="newProductName" placeholder="اسم المنتج" />
+                <input type="text" id="newProductLocation" placeholder="الموقع (مثال: 2a، 3c)" />
+                <button onclick="addProduct()">حفظ</button>
+            </div>
+        </div>
+        
+        <!-- نافذة تعديل منتج -->
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('editModal')">&times;</span>
+                <h2>تعديل موقع منتج</h2>
+                <input type="text" id="editProductName" placeholder="اسم المنتج" />
+                <input type="text" id="editProductLocation" placeholder="الموقع الجديد (مثال: 2a، 3c)" />
+                <button onclick="editProduct()">حفظ التعديل</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // التحقق من وجود بيانات في LocalStorage وإنشاء مصفوفة فارغة إذا لم تكن موجودة
+        if (!localStorage.getItem('products')) {
+            localStorage.setItem('products', JSON.stringify([]));
+        }
+        
+        // البحث عن منتج
+        function searchProduct() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!searchTerm) {
+                showMessage('الرجاء إدخال اسم المنتج للبحث', 'error');
+                return;
+            }
+            
+            const products = JSON.parse(localStorage.getItem('products'));
+            const foundProduct = products.find(p => p.name.toLowerCase() === searchTerm.toLowerCase());
+            
+            if (foundProduct) {
+                showMessage(`المنتج موجود في: ${foundProduct.location}`, 'success');
+            } else {
+                showMessage('المنتج غير موجود في المخزون', 'error');
+            }
+        }
+        
+        // إضافة منتج جديد
+        function addProduct() {
+            const productName = document.getElementById('newProductName').value.trim();
+            const productLocation = document.getElementById('newProductLocation').value.trim();
+            
+            if (!productName || !productLocation) {
+                showMessage('الرجاء إدخال اسم المنتج والموقع', 'error');
+                return;
+            }
+            
+            const products = JSON.parse(localStorage.getItem('products'));
+            
+            // التحقق من وجود المنتج مسبقاً
+            const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+            if (existingProduct) {
+                showMessage('هذا المنتج موجود بالفعل، استخدم خيار التعديل لتغيير موقعه', 'error');
+                return;
+            }
+            
+            // إضافة المنتج الجديد
+            products.push({
+                name: productName,
+                location: productLocation
+            });
+            
+            localStorage.setItem('products', JSON.stringify(products));
+            showMessage('تمت إضافة المنتج بنجاح', 'success');
+            closeModal('addModal');
+            clearInputs();
+            showAllProducts();
+        }
+        
+        // تعديل موقع منتج
+        function editProduct() {
+            const productName = document.getElementById('editProductName').value.trim();
+            const newLocation = document.getElementById('editProductLocation').value.trim();
+            
+            if (!productName || !newLocation) {
+                showMessage('الرجاء إدخال اسم المنتج والموقع الجديد', 'error');
+                return;
+            }
+            
+            const products = JSON.parse(localStorage.getItem('products'));
+            const productIndex = products.findIndex(p => p.name.toLowerCase() === productName.toLowerCase());
+            
+            if (productIndex === -1) {
+                showMessage('المنتج غير موجود في المخزون', 'error');
+                return;
+            }
+            
+            // تحديث موقع المنتج
+            products[productIndex].location = newLocation;
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            showMessage('تم تعديل موقع المنتج بنجاح', 'success');
+            closeModal('editModal');
+            clearInputs();
+            showAllProducts();
+        }
+        
+        // عرض جميع المنتجات
+        function showAllProducts() {
+            const productListDiv = document.getElementById('productList');
+            const products = JSON.parse(localStorage.getItem('products'));
+            
+            if (products.length === 0) {
+                productListDiv.innerHTML = '<p>لا توجد منتجات في المخزون</p>';
+                return;
+            }
+            
+            let html = '<h2>قائمة المنتجات</h2>';
+            
+            products.forEach(product => {
+                html += `
+                <div class="product-item">
+                    <span>${product.name}</span>
+                    <span>${product.location}</span>
+                </div>
+                `;
+            });
+            
+            productListDiv.innerHTML = html;
+        }
+        
+        // عرض رسالة للمستخدم
+        function showMessage(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+            
+            // إخفاء الرسالة بعد 3 ثوان
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // عرض نافذة الإضافة
+        function showAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+        }
+        
+        // عرض نافذة التعديل
+        function showEditModal() {
+            document.getElementById('editModal').style.display = 'block';
+        }
+        
+        // إغلاق النوافذ المنبثقة
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            clearInputs();
+        }
+        
+        // مسح حقول الإدخال
+        function clearInputs() {
+            document.getElementById('newProductName').value = '';
+            document.getElementById('newProductLocation').value = '';
+            document.getElementById('editProductName').value = '';
+            document.getElementById('editProductLocation').value = '';
+        }
+        
+        // إغلاق النافذة المنبثقة عند النقر خارجها
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+                clearInputs();
+            }
+        }
+    </script>
+</body>
+</html>
